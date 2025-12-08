@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+#MISE description "Install the Terraform HomeLab provider"
+
+set -euo pipefail
+
+echo ""
+echo "📦 Installing Terraform HomeLab provider to \$GOPATH/bin!..."
+
+go install .
+
+echo ""
+echo "✅ Provider installation completed successfully!"

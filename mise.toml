@@ -1,0 +1,25 @@
+[tools]
+go = "1.24.2"
+opentofu = "1.9.0"
+# terragrunt = "0.78.0"
+# mc = "latest"
+
+[env]
+PROJECT_NAME = "{{ config_root | basename }}"
+
+# _.file = [
+#   { path = "{{env.HOME}}/.env", optional = true },
+#   { path = ".env", optional = true },
+#   { path = ".creds.env.yaml", redact = true },
+# ]
+# _.path = ["./scripts"]
+
+[hooks]
+enter = [
+  'echo ""',
+  'echo "[MISE] Setup $PROJECT_NAME project..."',
+  #
+  'mise i -q',
+  #
+  # 'pre-commit install -f --hook-type pre-commit',
+]

@@ -1,0 +1,20 @@
+# Example .terraformrc configuration for local development
+# Copy this file to ~/.terraformrc and update the path to match your Go bin directory
+#
+# To find your Go bin directory, run: go env GOBIN
+# If GOBIN is empty, use: go env GOPATH and append /bin
+#
+# After updating this file:
+# 1. Run `make install` in the provider directory to build and install the provider
+# 2. Navigate to examples/data-sources/naming/
+# 3. Run `terraform init` (you may see warnings about dev overrides - this is expected)
+# 4. Run `terraform plan` to see the provider in action
+
+provider_installation {
+  dev_overrides {
+    "registry.terraform.io/abes140377/homelab" = "/Users/YOUR_USERNAME/go/bin"
+  }
+
+  # For all other providers, install them directly as normal.
+  direct {}
+}

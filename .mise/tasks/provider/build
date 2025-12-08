@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+#MiSE description "Build and verify the Terraform HomeLab provider"
+
+set -euo pipefail
+
+echo ""
+echo "📦 Installing Terraform HomeLab provider..."
+
+echo ""
+echo "- Formatting Go code..."
+go fmt .
+
+echo "- Running Go vet checks..."
+go vet .
+
+echo "- Tidying Go modules..."
+go mod tidy
+
+echo ""
+echo "✅ Provider build verification completed successfully!"
