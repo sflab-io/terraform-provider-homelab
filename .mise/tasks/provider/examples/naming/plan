@@ -6,5 +6,4 @@ cd examples/data-sources/naming
 
 export TF_CLI_CONFIG_FILE=.tofurc
 
-tofu init --upgrade
 tofu plan

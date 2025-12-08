@@ -9,5 +9,24 @@ echo "📦 Installing Terraform HomeLab provider to \$GOPATH/bin!..."
 
 go install .
 
+# To use the provider with OpenTofu, we need to copy the binary to the tofu plugins directory
+# The directory is usually located at ~/.local/share/opentofu/plugins/registry.terraform.io/<namespace>/<name>/<version>/<os_arch>/
+# This is required so the provider will be discovered by OpenTofu when running terragrunt / terraform commands
+# To configure where the provider could be found create a ~/.tofurc file with the following content:
+# provider_installation {
+#   dev_overrides {
+#     "registry.terraform.io/abes140377/homelab" = "/Users/seba/.local/share/mise/installs/go/1.24.2/bin"
+#   }
+#
+#   direct {}
+# }
+
+# Create the directory structure
+mkdir -p ~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.1.0/darwin_arm64
+
+# Copy the provider binary from the Go bin directory(target of go install . from above) to the tofu plugins directory
+cp ~/.local/share/mise/installs/go/1.24.2/bin/terraform-provider-homelab \
+     ~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.1.0/darwin_arm64/terraform-provider-homelab_v0.1.0
+
 echo ""
 echo "✅ Provider installation completed successfully!"
