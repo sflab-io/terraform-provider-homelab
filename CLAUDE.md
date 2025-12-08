@@ -39,11 +39,10 @@ mise run provider:examples:naming:plan
 
 # Or manually:
 cd examples/data-sources/naming
-TF_CLI_CONFIG_FILE=.terraformrc \
-   tofu plan
+TF_CLI_CONFIG_FILE=.tofurc tofu plan
 ```
 
-**Note:** This provider uses OpenTofu (`tofu`) for testing, not Terraform. The example directory contains a `.terraformrc` with dev_overrides pointing to the local Go bin directory.
+**Note:** This provider uses OpenTofu (`tofu`) for testing, not Terraform. The example directory contains a `.tofurc` with dev_overrides pointing to the local Go bin directory. When using dev_overrides, `tofu init` is not needed and may produce errors.
 
 ### Go Version
 
@@ -58,11 +57,10 @@ This project requires Go 1.24.2, managed via mise in this project. The mise conf
 │                                        # - Calls providerserver.Serve()
 │
 ├── .mise/                               # Mise task automation
-│   ├── common.sh                        # Common shell functions
 │   └── tasks/provider/                  # Provider-specific tasks
 │       ├── build                        # Format, vet, tidy (go fmt/vet/mod tidy)
-│       ├── install                      # Install provider (go install)
-│       └── examples/naming/plan         # Test with naming example (tofu plan)
+│       ├── install                      # Install provider to both Go bin AND OpenTofu plugins dir
+│       └── examples/naming/plan         # Test with naming example (tofu plan only, no init)
 │
 ├── internal/provider/
 │   ├── provider.go                      # Provider implementation
@@ -77,9 +75,11 @@ This project requires Go 1.24.2, managed via mise in this project. The mise conf
 │                                        # - Read logic: concatenates app-env with hyphen
 │                                        # - Uses terraform-plugin-framework types
 │
-└── examples/data-sources/naming/
-    ├── main.tf                          # Example usage of homelab_naming
-    └── .terraformrc                     # Dev overrides config
+└── examples/
+    ├── .tofurc.example                  # Example config with both dev_overrides and filesystem_mirror
+    └── data-sources/naming/
+        ├── main.tf                      # Example usage of homelab_naming
+        └── .tofurc                      # Dev overrides config (active, used by plan task)
 ```
 
 ## Key Implementation Patterns
@@ -132,14 +132,39 @@ Since there are no automated tests:
 
 ## Local Development Setup
 
-The provider uses dev_overrides to enable local testing without publishing:
+The provider supports two installation approaches for local development:
 
-1. Build/install puts binary in Go bin directory
-2. `.terraformrc` in example directories points to that bin path
-3. `TF_CLI_CONFIG_FILE=.terraformrc` tells OpenTofu to use dev overrides
-4. No `terraform init` needed when using dev overrides
+### Approach 1: dev_overrides (Recommended for Development)
 
-**Important:** Dev overrides warnings are expected and normal during local development.
+This is the recommended approach during active development:
+
+1. **Install**: `mise run provider:install` puts binary in Go bin directory (`~/.local/share/mise/installs/go/1.24.2/bin/terraform-provider-homelab`)
+2. **Configure**: `.tofurc` in example directories points to that bin path via `dev_overrides`
+3. **Use**: `TF_CLI_CONFIG_FILE=.tofurc` tells OpenTofu to use dev overrides
+4. **No init needed**: Skip `tofu init` when using dev_overrides (not necessary and may error)
+
+**Advantages:**
+- Changes available immediately after `go install`
+- No version management needed
+- Fastest iteration cycle
+
+**Note:** Dev overrides warnings are expected and normal during local development.
+
+### Approach 2: filesystem_mirror
+
+The `mise run provider:install` task also copies the provider to the OpenTofu plugins directory structure:
+- Target: `~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.1.0/darwin_arm64/`
+- Binary name: `terraform-provider-homelab_v0.1.0`
+
+This approach mimics a registry installation and requires:
+- Proper version directory structure
+- Running `tofu init` to discover the provider
+- Configuring `filesystem_mirror` in `.tofurc`
+
+**Use this approach when:**
+- Testing provider versioning behavior
+- Simulating registry-like installation
+- Sharing the provider locally without dev_overrides
 
 ## Limitations
 
