@@ -1,3 +1,6 @@
+.prompts/
+
+# Binaries for Terraform provider plugins
 terraform-provider-homelab
 
 # Binaries for programs and plugins
