@@ -73,7 +73,7 @@ func (d *namingDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	// If env is "prod", do not concatenate — use the app name as-is and return early.
-	if data.Env.ValueString() == "prod" {
+	if data.Env.ValueString() == "prod" || data.Env.ValueString() == "production" {
 		data.Name = types.StringValue(data.App.ValueString())
 		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		if resp.Diagnostics.HasError() {

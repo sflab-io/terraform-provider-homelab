@@ -2,6 +2,7 @@ terraform {
   required_providers {
     homelab = {
       source = "registry.terraform.io/abes140377/homelab"
+      version = ">= 0.2.0"
     }
   }
 }
@@ -14,9 +15,14 @@ data "homelab_naming" "dev_web" {
   app = "web"
 }
 
-# Example: Production database
+# Example: prod / production database
 data "homelab_naming" "prod_db" {
   env = "prod"
+  app = "db"
+}
+
+data "homelab_naming" "production_db" {
+  env = "production"
   app = "db"
 }
 
@@ -34,6 +40,11 @@ output "dev_web_name" {
 output "prod_db_name" {
   value       = data.homelab_naming.prod_db.name
   description = "Generated name for prod database"
+}
+
+output "production_db_name" {
+  value       = data.homelab_naming.production_db.name
+  description = "Generated name for production database"
 }
 
 output "staging_api_name" {

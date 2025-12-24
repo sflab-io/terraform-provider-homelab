@@ -2,6 +2,8 @@
 
 #MISE description "Install the Terraform HomeLab provider"
 
+#USAGE arg "<version>" help="Version of the Terraform HomeLab provider to install" default="0.2.0"
+
 set -euo pipefail
 
 OS_ARCH="$(go env GOOS)_$(go env GOARCH)"
@@ -28,13 +30,13 @@ echo "📦 Copying Terraform HomeLab provider to OpenTofu plugins directory..."
 echo ""
 
 # Create the directory structure
-TARGET_DIR=~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.1.0/$OS_ARCH
+TARGET_DIR=~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/${usage_version?}/$OS_ARCH
 mkdir -p "$TARGET_DIR"
 
 # Copy the provider binary from the Go bin directory(target of go install . from above) to the tofu plugins directory
 cp -v \
      "$(go env GOBIN)/terraform-provider-homelab" \
-     "$TARGET_DIR/terraform-provider-homelab_v0.1.0"
+     "$TARGET_DIR/terraform-provider-homelab_v${usage_version?}"
 
 echo ""
 echo "✅ Provider installation completed successfully!"
