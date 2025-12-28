@@ -2,8 +2,14 @@
 # This configuration is specifically designed for Terraform/OpenTofu providers
 # and follows Terraform Registry requirements for artifact naming and structure.
 #
-# Testing locally:
-#   goreleaser release --snapshot --clean --skip=publish
+# Local Development:
+#   mise run provider:install
+#
+# This uses: goreleaser build --snapshot --single-target --clean
+# Produces version string like: 0.2.0-next+20250128.abc123 (includes timestamp and git hash)
+#
+# For manual GoReleaser builds:
+#   goreleaser build --snapshot --clean  # All platforms
 #
 # This will create a local build in the dist/ directory without publishing.
 

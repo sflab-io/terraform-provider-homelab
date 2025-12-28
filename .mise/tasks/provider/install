@@ -15,9 +15,21 @@ rm -f "$GOROOT/bin/terraform-provider-homelab"
 rm -rf $HOME/.local/share/opentofu/plugins/
 
 echo ""
+echo "📦 Building Terraform HomeLab provider with GoReleaser (snapshot mode)..."
+
+# Build using GoReleaser in snapshot mode for local development
+# --snapshot: No git tag required, uses timestamp-based versioning
+# --single-target: Builds only for current platform (faster)
+# --clean: Removes dist/ before building
+goreleaser build --snapshot --single-target --clean
+
+echo ""
 echo "📦 Installing Terraform HomeLab provider to \$GOROOT/bin ($GOROOT/bin)..."
 
-go install .
+# Extract the binary from dist/ and install to GOBIN
+# GoReleaser build creates subdirectories for each target (e.g., dist/terraform-provider-homelab_darwin_arm64_v8.0/)
+BINARY_PATH=$(find dist -name terraform-provider-homelab -type f | head -1)
+cp "$BINARY_PATH" "$(go env GOBIN)/terraform-provider-homelab"
 
 # To use the provider with OpenTofu, we need to copy the binary to the tofu plugins directory
 # The directory is usually located at ~/.local/share/opentofu/plugins/registry.terraform.io/<namespace>/<name>/<version>/<os_arch>/

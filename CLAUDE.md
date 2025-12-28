@@ -18,18 +18,24 @@ This is a custom OpenTofu provider that implements standardized naming conventio
 ### Building and Installing
 
 ```bash
-# Format, vet, and tidy dependencies
+# Format, vet, and tidy dependencies (quick validation)
 mise run provider:build
 
-# Install the provider to Go bin directory
+# Build and install the provider using GoReleaser (local snapshot build)
 mise run provider:install
 
 # Or manually:
 go fmt .
 go vet .
 go mod tidy
-go install .
+# For GoReleaser build:
+goreleaser build --snapshot --single-target --clean
+cp dist/terraform-provider-homelab "$(go env GOBIN)/terraform-provider-homelab"
 ```
+
+**Note:** The install task uses GoReleaser in snapshot mode for consistency with release builds. This adds ~2-3s compared to `go install`, but ensures identical build flags and provides meaningful version strings (e.g., `0.2.0-next+20250128.abc123`).
+
+For fastest iteration during debugging, you can still use `go install .` directly, though this builds with version="dev".
 
 ### Testing
 
@@ -59,7 +65,7 @@ This project requires Go 1.24.2, managed via mise in this project. The mise conf
 ├── .mise/                               # Mise task automation
 │   └── tasks/provider/                  # Provider-specific tasks
 │       ├── build                        # Format, vet, tidy (go fmt/vet/mod tidy)
-│       ├── install                      # Install provider to both Go bin AND OpenTofu plugins dir
+│       ├── install                      # Build with GoReleaser and install to Go bin AND OpenTofu plugins dir
 │       └── examples/naming/plan         # Test with naming example (tofu plan only, no init)
 │
 ├── internal/provider/
