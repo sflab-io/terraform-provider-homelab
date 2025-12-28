@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a custom Terraform/OpenTofu provider that implements standardized naming conventions for homelab infrastructure. The provider is built using the Terraform Plugin Framework and currently provides a single data source (`homelab_naming`) that generates consistent resource names following the pattern `<app>-<env>`.
+This is a custom OpenTofu provider that implements standardized naming conventions for homelab infrastructure. The provider is built using the Terraform Plugin Framework and currently provides a single data source (`homelab_naming`) that generates consistent resource names following the pattern `<app>-<env>`, with special handling for production environments (`prod`/`production`) which omit the environment suffix.
 
 **Key Architecture Points:**
 - Provider address: `registry.terraform.io/abes140377/homelab`
 - Built using HashiCorp's terraform-plugin-framework (v1.16.1)
 - Currently data-source only (no managed resources)
 - No provider-level configuration required
-- Local development uses dev_overrides in `.terraformrc`
+- Local development uses dev_overrides in `.tofurc`
 
 ## Development Commands
 
@@ -72,7 +72,7 @@ This project requires Go 1.24.2, managed via mise in this project. The mise conf
 │   └── naming_data_source.go            # Naming data source
 │                                        # - Implements DataSource interface
 │                                        # - Schema: env (string), app (string), name (computed string)
-│                                        # - Read logic: concatenates app-env with hyphen
+│                                        # - Read logic: concatenates app-env with hyphen, except for prod/production
 │                                        # - Uses terraform-plugin-framework types
 │
 └── examples/
@@ -99,13 +99,24 @@ The naming data source follows the standard terraform-plugin-framework pattern:
 
 ### Current Naming Logic
 
-**IMPORTANT:** The naming pattern in `naming_data_source.go:76` concatenates as `app-env`:
+**IMPORTANT:** The naming logic in `naming_data_source.go:75-86` implements special handling for production environments:
 
 ```go
+// If env is "prod" or "production", return only the app name (no suffix)
+if data.Env.ValueString() == "prod" || data.Env.ValueString() == "production" {
+    data.Name = types.StringValue(data.App.ValueString())
+    return
+}
+
+// For all other environments, concatenate as app-env
 name := fmt.Sprintf("%s-%s", data.App.ValueString(), data.Env.ValueString())
 ```
 
-So `env="dev"` and `app="web"` produces `"web-dev"`. The documentation has been updated to reflect this pattern correctly.
+**Examples:**
+- `env="prod"` and `app="web"` produces `"web"`
+- `env="production"` and `app="db"` produces `"db"`
+- `env="dev"` and `app="web"` produces `"web-dev"`
+- `env="staging"` and `app="api"` produces `"api-staging"`
 
 ### Adding New Data Sources
 
@@ -153,8 +164,8 @@ This is the recommended approach during active development:
 ### Approach 2: filesystem_mirror
 
 The `mise run provider:install` task also copies the provider to the OpenTofu plugins directory structure:
-- Target: `~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.1.0/darwin_arm64/`
-- Binary name: `terraform-provider-homelab_v0.1.0`
+- Target: `~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.2.0/darwin_arm64/`
+- Binary name: `terraform-provider-homelab_v0.2.0`
 
 This approach mimics a registry installation and requires:
 - Proper version directory structure
@@ -171,5 +182,5 @@ This approach mimics a registry installation and requires:
 - No automated acceptance tests (manual testing only via examples)
 - No managed resources (data sources only)
 - No provider functions
-- Simple string concatenation with no validation
+- Simple naming logic with special prod/production handling; no advanced validation or transformations
 - Not published to Terraform Registry (local development only)

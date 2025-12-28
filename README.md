@@ -1,6 +1,6 @@
-# Terraform Provider: Homelab
+# OpenTofu Provider: Homelab
 
-A custom Terraform/OpenTofu provider for standardized resource naming in homelab infrastructure environments.
+A custom OpenTofu provider for standardized resource naming in homelab infrastructure environments.
 
 ## Overview
 
@@ -8,15 +8,15 @@ The Homelab provider enables consistent naming conventions across all infrastruc
 
 ## Features
 
-- **Standardized Naming**: Generate consistent names following the pattern `<app>-<env>`
-- **Type Safety**: Terraform validates inputs at plan time
+- **Standardized Naming**: Generate consistent names following the pattern `<app>-<env>` (with special handling for production environments)
+- **Type Safety**: OpenTofu validates inputs at plan time
 - **Zero Configuration**: No provider-level configuration required
 - **Extensible**: Foundation for future datasources, resources, and functions
 
 ## Requirements
 
 - [Go](https://golang.org/doc/install) 1.24.2 (managed via mise in this project)
-- [OpenTofu](https://opentofu.org/) >= 1.9.0 or [Terraform](https://www.terraform.io/downloads.html) >= 1.0
+- [OpenTofu](https://opentofu.org/) >= 1.9.0
 
 ## Installation
 
@@ -36,7 +36,7 @@ This installs the provider binary to your Go bin directory. When using mise, thi
 
 2. **Configure dev overrides:**
 
-Create or edit `~/.terraformrc` (or `~/.tofurc` for OpenTofu) with the following content:
+Create or edit `~/.tofurc` with the following content:
 
 ```hcl
   provider_installation {
@@ -68,7 +68,7 @@ mise run provider:examples:naming:plan
 
 # Or manually
 cd examples/data-sources/naming
-TF_CLI_CONFIG_FILE=.terraformrc \
+TF_CLI_CONFIG_FILE=.tofurc \
   tofu plan
 ```
 
@@ -82,7 +82,8 @@ You should see output showing the generated names.
 terraform {
   required_providers {
     homelab = {
-      source = "registry.terraform.io/abes140377/homelab"
+      source  = "registry.terraform.io/abes140377/homelab"
+      version = ">= 0.2.0"
     }
   }
 }
@@ -112,18 +113,29 @@ Generates standardized names based on environment and application identifiers.
 
 #### Attributes
 
-- `name` (String) - The generated name following the pattern `<app>-<env>`
+- `name` (String) - The generated name following the pattern `<app>-<env>`, or just `<app>` for `prod`/`production` environments
 
-#### Example
+#### Examples
 
 ```hcl
+# Production environment - no suffix
 data "homelab_naming" "prod_database" {
   app = "db"
   env = "prod"
 }
 
 output "database_name" {
-  value = data.homelab_naming.prod_database.name  # Output: "db-prod"
+  value = data.homelab_naming.prod_database.name  # Output: "db"
+}
+
+# Non-production environment - includes suffix
+data "homelab_naming" "dev_web" {
+  app = "web"
+  env = "dev"
+}
+
+output "web_server_name" {
+  value = data.homelab_naming.dev_web.name  # Output: "web-dev"
 }
 ```
 
@@ -132,7 +144,7 @@ output "database_name" {
 The naming datasource can be used to ensure consistent naming across your infrastructure:
 
 ```hcl
-# Generate a name
+# Generate a name for production API (output: "api")
 data "homelab_naming" "app_server" {
   app = "api"
   env = "prod"
@@ -140,15 +152,21 @@ data "homelab_naming" "app_server" {
 
 # Use it in a Proxmox LXC container
 resource "proxmox_virtual_environment_container" "app" {
-  hostname = data.homelab_naming.app_server.name
+  hostname = data.homelab_naming.app_server.name  # "api"
   # ... other configuration
 }
 
 # Use it in DNS records
 resource "dns_a_record_set" "app" {
   zone      = "example.com."
-  name      = data.homelab_naming.app_server.name
+  name      = data.homelab_naming.app_server.name  # "api"
   addresses = [proxmox_virtual_environment_container.app.ipv4_addresses[0]]
+}
+
+# For staging environment (output: "api-staging")
+data "homelab_naming" "staging_api" {
+  app = "api"
+  env = "staging"
 }
 ```
 
@@ -194,7 +212,7 @@ mise run provider:examples:naming:plan
 
 # Or manually
 cd examples/data-sources/naming
-TF_CLI_CONFIG_FILE=.terraformrc tofu plan
+TF_CLI_CONFIG_FILE=.tofurc tofu plan
 ```
 
 ### Project Structure
@@ -203,6 +221,7 @@ TF_CLI_CONFIG_FILE=.terraformrc tofu plan
 terraform-provider-homelab/
 ├── main.go                          # Provider server entry point
 ├── go.mod                           # Go module definition
+├── CLAUDE.md                        # Claude Code guidance
 ├── .mise/
 │   ├── common.sh                    # Common functions for tasks
 │   └── tasks/
@@ -215,18 +234,17 @@ terraform-provider-homelab/
 │       ├── provider.go              # Provider implementation
 │       └── naming_data_source.go    # Naming datasource implementation
 └── examples/
-    └── data-sources/
-        └── naming/
-            ├── main.tf              # Usage example
-            └── .terraformrc         # Dev overrides config
+    └── data-sources/naming/
+        ├── main.tf                  # Usage example
+        └── .tofurc                  # Dev overrides config
 ```
 
 ## Limitations
 
 This is a proof-of-concept implementation with the following limitations:
 
-- **No Registry Publication**: Provider must be installed locally; not available in Terraform Registry
-- **Simple Logic**: Only concatenates `app` and `env` with a hyphen (pattern: `<app>-<env>`); no advanced validation or transformations
+- **No Registry Publication**: Provider must be installed locally; not available in OpenTofu Registry
+- **Simple Logic**: Concatenates `app` and `env` with a hyphen (pattern: `<app>-<env>`), with special handling for `prod`/`production` environments (no suffix); no advanced validation or transformations
 - **No Resources**: Only implements a datasource; no managed resources
 - **No Functions**: Provider functions not implemented
 - **Manual Testing**: No automated test framework
@@ -239,25 +257,24 @@ Potential improvements for future iterations:
 2. **Additional Attributes**: Support resource type, location, project identifiers
 3. **Resources**: Implement managed resources for naming conventions storage
 4. **Provider Functions**: Add utility functions for name manipulation
-5. **Registry Publication**: Package and publish to Terraform Registry
-6. **Automated Testing**: Implement acceptance tests using Terraform plugin testing framework
+5. **Registry Publication**: Package and publish to OpenTofu Registry
 
 ## Troubleshooting
 
 ### Provider Not Found
 
-**Issue**: Terraform/OpenTofu cannot find the provider.
+**Issue**: OpenTofu cannot find the provider.
 
 **Solution**:
 1. Verify the provider is installed: `ls -la $(go env GOBIN)/terraform-provider-homelab`
-2. Check your `.terraformrc` configuration points to the correct directory
+2. Check your `.tofurc` configuration points to the correct directory
 3. Ensure the provider address matches: `registry.terraform.io/abes140377/homelab`
 
 ### Dev Override Warnings
 
 **Issue**: Seeing warnings about "Provider development overrides are in effect".
 
-**Solution**: This is expected behavior when using dev overrides. The warnings remind you that you're using a local build instead of a registry version. You can skip `terraform init` when using dev overrides.
+**Solution**: This is expected behavior when using dev overrides. The warnings remind you that you're using a local build instead of a registry version. You can skip `tofu init` when using dev overrides.
 
 ### Build Failures
 

@@ -6,7 +6,13 @@
 
 set -euo pipefail
 
+GITHUB_USER="abes140377"
 OS_ARCH="$(go env GOOS)_$(go env GOARCH)"
+
+echo ""
+echo "📦 Removing existing Terraform HomeLab provider from \$GOROOT/bin ($GOROOT/bin)..."
+rm -f "$GOROOT/bin/terraform-provider-homelab"
+rm -rf $HOME/.local/share/opentofu/plugins/
 
 echo ""
 echo "📦 Installing Terraform HomeLab provider to \$GOROOT/bin ($GOROOT/bin)..."
@@ -30,11 +36,11 @@ echo "📦 Copying Terraform HomeLab provider to OpenTofu plugins directory..."
 echo ""
 
 # Create the directory structure
-TARGET_DIR=~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/${usage_version?}/$OS_ARCH
+TARGET_DIR=$HOME/.local/share/opentofu/plugins/registry.terraform.io/$GITHUB_USER/homelab/${usage_version?}/$OS_ARCH
 mkdir -p "$TARGET_DIR"
 
-# Copy the provider binary from the Go bin directory(target of go install . from above) to the tofu plugins directory
-cp -v \
+# Linking the provider binary from the Go bin directory(target of go install . from above) to the tofu plugins directory
+ln -vs \
      "$(go env GOBIN)/terraform-provider-homelab" \
      "$TARGET_DIR/terraform-provider-homelab_v${usage_version?}"
 

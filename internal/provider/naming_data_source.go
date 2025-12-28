@@ -38,7 +38,8 @@ func (d *namingDataSource) Metadata(_ context.Context, req datasource.MetadataRe
 func (d *namingDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Generates a standardized name based on environment and application identifiers.",
-		MarkdownDescription: "The `naming` data source generates standardized names following the pattern `<env>-<app>`. " +
+		MarkdownDescription: "The `naming` data source generates standardized names following the pattern `<app>-<env>`. " +
+			"For production environments (`prod` or `production`), only the app name is used without an environment suffix. " +
 			"This enables consistent naming conventions across all homelab infrastructure resources.",
 
 		Attributes: map[string]schema.Attribute{
@@ -53,8 +54,8 @@ func (d *namingDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Required:            true,
 			},
 			"name": schema.StringAttribute{
-				Description:         "The generated name following the pattern <env>-<app>.",
-				MarkdownDescription: "The generated name following the pattern `<env>-<app>`.",
+				Description:         "The generated name following the pattern <app>-<env>, or just <app> for prod/production environments.",
+				MarkdownDescription: "The generated name following the pattern `<app>-<env>`, or just `<app>` for `prod`/`production` environments.",
 				Computed:            true,
 			},
 		},
