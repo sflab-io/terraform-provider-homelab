@@ -5,8 +5,8 @@ import (
 	"flag"
 	"log"
 
-	"github.com/abes140377/terraform-provider-homelab/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/sflab-io/terraform-provider-homelab/internal/provider"
 )
 
 // version is set during the release process to the release version of the binary.
@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/abes140377/homelab",
+		Address: "registry.terraform.io/sflab-io/homelab",
 		Debug:   debug,
 	}
 

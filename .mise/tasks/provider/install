@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-GITHUB_USER="abes140377"
+GITHUB_USER="sflab-io"
 OS_ARCH="$(go env GOOS)_$(go env GOARCH)"
 
 echo ""
@@ -37,7 +37,7 @@ cp "$BINARY_PATH" "$(go env GOBIN)/terraform-provider-homelab"
 # To configure where the provider could be found create a ~/.tofurc file with the following content:
 # provider_installation {
 #   dev_overrides {
-#     "registry.terraform.io/abes140377/homelab" = "/Users/seba/.local/share/mise/installs/go/1.24.2/bin"
+#     "registry.terraform.io/sflab-io/homelab" = "/Users/seba/.local/share/mise/installs/go/1.24.2/bin"
 #   }
 #
 #   direct {}

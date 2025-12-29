@@ -1,4 +1,4 @@
-module github.com/abes140377/terraform-provider-homelab
+module github.com/sflab-io/terraform-provider-homelab
 
 go 1.24.2
 

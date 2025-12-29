@@ -63,7 +63,7 @@ jobs:
       # This is recommended for Terraform Registry publishing
       # To enable:
       # 1. Generate GPG key locally: gpg --full-generate-key
-      # 2. Export private key: gpg --armor --export-secret-keys abes140377@web.de
+      # 2. Export private key: gpg --armor --export-secret-keys sflab-io@web.de
       # 3. Add to GitHub Secrets as GPG_PRIVATE_KEY
       # 4. Add GPG_FINGERPRINT to GitHub Secrets (gpg --list-secret-keys --keyid-format LONG)
       # 5. Uncomment the section below and the signs section in .goreleaser.yml

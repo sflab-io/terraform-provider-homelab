@@ -55,7 +55,7 @@ go install .
 
 **Installation Details:**
 - Mise task installs to: `~/.local/share/mise/installs/go/1.24.2/bin/terraform-provider-homelab`
-- Also creates symlink in: `~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.2.0/<os_arch>/`
+- Also creates symlink in: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.2.0/<os_arch>/`
 - Version format (GoReleaser): `0.2.0-next+20250129.abc123`
 - Version format (go install): `dev`
 
@@ -66,7 +66,7 @@ Create or edit `~/.tofurc` with the following content:
 ```hcl
   provider_installation {
     dev_overrides {
-      "registry.terraform.io/abes140377/homelab" = "/path/to/your/go/bin"
+      "registry.terraform.io/sflab-io/homelab" = "/path/to/your/go/bin"
     }
 
     direct {}
@@ -132,11 +132,11 @@ Uses the symlinked installation in `~/.local/share/opentofu/plugins/`.
 provider_installation {
   filesystem_mirror {
     path    = "/Users/yourusername/.local/share/opentofu/plugins"
-    include = ["registry.terraform.io/abes140377/*"]
+    include = ["registry.terraform.io/sflab-io/*"]
   }
 
   direct {
-    exclude = ["registry.terraform.io/abes140377/*"]
+    exclude = ["registry.terraform.io/sflab-io/*"]
   }
 }
 ```
@@ -151,7 +151,7 @@ See `examples/.tofurc.example` for a complete configuration example.
 terraform {
   required_providers {
     homelab = {
-      source  = "registry.terraform.io/abes140377/homelab"
+      source  = "registry.terraform.io/sflab-io/homelab"
       version = ">= 0.2.0"
     }
   }
@@ -366,7 +366,7 @@ Potential improvements for future iterations:
 **Solution**:
 1. Verify the provider is installed: `ls -la $(go env GOBIN)/terraform-provider-homelab`
 2. Check your `.tofurc` configuration points to the correct directory
-3. Ensure the provider address matches: `registry.terraform.io/abes140377/homelab`
+3. Ensure the provider address matches: `registry.terraform.io/sflab-io/homelab`
 
 ### Dev Override Warnings
 

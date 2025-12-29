@@ -102,7 +102,7 @@ checksum:
 release:
   # Create GitHub release with generated artifacts
   github:
-    owner: abes140377
+    owner: sflab-io
     name: terraform-provider-homelab
 
   # Generate release notes from git history
@@ -130,7 +130,7 @@ release:
     terraform {
       required_providers {
         homelab = {
-          source  = "abes140377/homelab"
+          source  = "sflab-io/homelab"
           version = "~> {{ .Version }}"
         }
       }
@@ -141,7 +141,7 @@ release:
 
     Download the appropriate archive for your platform from the assets below and extract it to your Terraform plugins directory.
 
-    **Full Changelog**: https://github.com/abes140377/terraform-provider-homelab/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/sflab-io/terraform-provider-homelab/compare/{{ .PreviousTag }}...{{ .Tag }}
 
 changelog:
   # Use commits since last tag for changelog generation

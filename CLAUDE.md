@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a custom OpenTofu provider that implements standardized naming conventions for homelab infrastructure. The provider is built using the Terraform Plugin Framework and currently provides a single data source (`homelab_naming`) that generates consistent resource names following the pattern `<app>-<env>`, with special handling for production environments (`prod`/`production`) which omit the environment suffix.
 
 **Key Architecture Points:**
-- Provider address: `registry.terraform.io/abes140377/homelab`
+- Provider address: `registry.terraform.io/sflab-io/homelab`
 - Built using HashiCorp's terraform-plugin-framework (v1.16.1)
 - Currently data-source only (no managed resources)
 - No provider-level configuration required
@@ -221,7 +221,7 @@ This is the recommended approach during active development:
    ```hcl
    provider_installation {
      dev_overrides {
-       "registry.terraform.io/abes140377/homelab" = "/Users/seba/.local/share/mise/installs/go/1.24.2/bin"
+       "registry.terraform.io/sflab-io/homelab" = "/Users/seba/.local/share/mise/installs/go/1.24.2/bin"
      }
      direct {}
    }
@@ -241,8 +241,8 @@ This is the recommended approach during active development:
 ### Approach 2: filesystem_mirror
 
 The `mise run provider:install` task also symlinks the provider to the OpenTofu plugins directory structure:
-- Target: `~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.2.0/<os_arch>/`
-  - Example for macOS ARM64: `~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.2.0/darwin_arm64/`
+- Target: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.2.0/<os_arch>/`
+  - Example for macOS ARM64: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.2.0/darwin_arm64/`
 - Binary name: `terraform-provider-homelab_v0.2.0`
 - Implementation: Creates symlink from GOBIN to plugins directory
 
