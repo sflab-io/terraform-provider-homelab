@@ -6,7 +6,7 @@
 #   mise run provider:install
 #
 # This uses: goreleaser build --snapshot --single-target --clean
-# Produces version string like: 0.2.0-next+20250128.abc123 (includes timestamp and git hash)
+# Produces version string like: 0.3.0-next+20250128.abc123 (includes timestamp and git hash)
 #
 # For manual GoReleaser builds:
 #   goreleaser build --snapshot --clean  # All platforms

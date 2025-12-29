@@ -2,7 +2,7 @@
 
 #MISE description "Install the Terraform HomeLab provider"
 
-#USAGE arg "<version>" help="Version of the Terraform HomeLab provider to install" default="0.2.0"
+#USAGE arg "<version>" help="Version of the Terraform HomeLab provider to install" default="0.3.0"
 
 set -euo pipefail
 

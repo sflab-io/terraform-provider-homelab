@@ -34,7 +34,7 @@ mise tasks
 mise run provider:build
 
 # Build and install the provider using GoReleaser (local snapshot build)
-mise run provider:install [version]  # Default version: 0.2.0
+mise run provider:install [version]  # Default version: 0.3.0
 
 # Or manually:
 go fmt .
@@ -47,7 +47,7 @@ cp dist/terraform-provider-homelab_*/terraform-provider-homelab "$(go env GOBIN)
 
 **Important Notes:**
 - The install task uses GoReleaser in snapshot mode for consistency with release builds
-- Adds ~2-3s compared to `go install`, but ensures identical build flags and provides meaningful version strings (e.g., `0.2.0-next+20250128.abc123`)
+- Adds ~2-3s compared to `go install`, but ensures identical build flags and provides meaningful version strings (e.g., `0.3.0-next+20250128.abc123`)
 - **WARNING**: `mise run provider:install` removes existing installations:
   - Removes `$(go env GOBIN)/terraform-provider-homelab`
   - Removes entire `~/.local/share/opentofu/plugins/` directory
@@ -109,7 +109,7 @@ The mise configuration (`mise.toml`) automatically:
 │
 ├── .goreleaser.yml                      # GoReleaser configuration for builds and releases
 │                                        # - Snapshot mode for local dev (--snapshot --single-target)
-│                                        # - Generates version strings like: 0.2.0-next+20250128.abc123
+│                                        # - Generates version strings like: 0.3.0-next+20250128.abc123
 │
 ├── mise.toml                            # Mise configuration
 │                                        # - Tool versions (Go, GoReleaser, OpenTofu, golangci-lint)
@@ -215,7 +215,7 @@ This is the recommended approach during active development:
 1. **Install**: `mise run provider:install` builds with GoReleaser and installs to GOBIN
    - GOBIN location: `~/.local/share/mise/installs/go/1.24.2/bin` (when using mise)
    - Binary name: `terraform-provider-homelab`
-   - Version format: `0.2.0-next+20250128.abc123` (snapshot builds include timestamp and git hash)
+   - Version format: `0.3.0-next+20250128.abc123` (snapshot builds include timestamp and git hash)
 
 2. **Configure**: `.tofurc` in example directories points to GOBIN via `dev_overrides`
    ```hcl
@@ -241,8 +241,8 @@ This is the recommended approach during active development:
 ### Approach 2: filesystem_mirror
 
 The `mise run provider:install` task also symlinks the provider to the OpenTofu plugins directory structure:
-- Target: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.2.0/<os_arch>/`
-  - Example for macOS ARM64: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.2.0/darwin_arm64/`
+- Target: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.3.0/<os_arch>/`
+  - Example for macOS ARM64: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.3.0/darwin_arm64/`
 - Binary name: `terraform-provider-homelab_v0.2.0`
 - Implementation: Creates symlink from GOBIN to plugins directory
 

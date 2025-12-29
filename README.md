@@ -55,8 +55,8 @@ go install .
 
 **Installation Details:**
 - Mise task installs to: `~/.local/share/mise/installs/go/1.24.2/bin/terraform-provider-homelab`
-- Also creates symlink in: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.2.0/<os_arch>/`
-- Version format (GoReleaser): `0.2.0-next+20250129.abc123`
+- Also creates symlink in: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.3.0/<os_arch>/`
+- Version format (GoReleaser): `0.3.0-next+20250129.abc123`
 - Version format (go install): `dev`
 
 2. **Configure dev overrides:**
@@ -152,7 +152,7 @@ terraform {
   required_providers {
     homelab = {
       source  = "registry.terraform.io/sflab-io/homelab"
-      version = ">= 0.2.0"
+      version = ">= 0.3.0"
     }
   }
 }
@@ -251,7 +251,7 @@ mise tasks
 
 # Available tasks:
 # provider:build                 - Format, vet, and tidy code (go fmt/vet/mod tidy)
-# provider:install [version]     - Build with GoReleaser and install (default: 0.2.0)
+# provider:install [version]     - Build with GoReleaser and install (default: 0.3.0)
 # provider:examples:naming:plan  - Test provider with naming example
 ```
 
@@ -288,7 +288,7 @@ go install .
 
 **Important Notes:**
 - `mise run provider:install` uses GoReleaser in snapshot mode for consistency with releases
-- Snapshot builds generate version strings like: `0.2.0-next+20250129.abc123`
+- Snapshot builds generate version strings like: `0.3.0-next+20250129.abc123`
 - **WARNING**: The install task cleans previous installations:
   - Removes `$(go env GOBIN)/terraform-provider-homelab`
   - Removes entire `~/.local/share/opentofu/plugins/` directory
