@@ -15,6 +15,18 @@ This is a custom OpenTofu provider that implements standardized naming conventio
 
 ## Development Commands
 
+### Available Mise Tasks
+
+This project uses mise for task automation. List all available tasks:
+
+```bash
+mise tasks
+# Output:
+# provider:build                       Build and verify the tofu homeLab provider
+# provider:install                     Install the Terraform HomeLab provider
+# provider:examples:naming:plan        Plan tofu homeLab provider naming data sources examples
+```
+
 ### Building and Installing
 
 ```bash
@@ -22,7 +34,7 @@ This is a custom OpenTofu provider that implements standardized naming conventio
 mise run provider:build
 
 # Build and install the provider using GoReleaser (local snapshot build)
-mise run provider:install
+mise run provider:install [version]  # Default version: 0.2.0
 
 # Or manually:
 go fmt .
@@ -30,12 +42,16 @@ go vet .
 go mod tidy
 # For GoReleaser build:
 goreleaser build --snapshot --single-target --clean
-cp dist/terraform-provider-homelab "$(go env GOBIN)/terraform-provider-homelab"
+cp dist/terraform-provider-homelab_*/terraform-provider-homelab "$(go env GOBIN)/terraform-provider-homelab"
 ```
 
-**Note:** The install task uses GoReleaser in snapshot mode for consistency with release builds. This adds ~2-3s compared to `go install`, but ensures identical build flags and provides meaningful version strings (e.g., `0.2.0-next+20250128.abc123`).
-
-For fastest iteration during debugging, you can still use `go install .` directly, though this builds with version="dev".
+**Important Notes:**
+- The install task uses GoReleaser in snapshot mode for consistency with release builds
+- Adds ~2-3s compared to `go install`, but ensures identical build flags and provides meaningful version strings (e.g., `0.2.0-next+20250128.abc123`)
+- **WARNING**: `mise run provider:install` removes existing installations:
+  - Removes `$(go env GOBIN)/terraform-provider-homelab`
+  - Removes entire `~/.local/share/opentofu/plugins/` directory
+- For fastest iteration during debugging, you can use `go install .` directly (builds with version="dev")
 
 ### Testing
 
@@ -50,9 +66,32 @@ TF_CLI_CONFIG_FILE=.tofurc tofu plan
 
 **Note:** This provider uses OpenTofu (`tofu`) for testing, not Terraform. The example directory contains a `.tofurc` with dev_overrides pointing to the local Go bin directory. When using dev_overrides, `tofu init` is not needed and may produce errors.
 
-### Go Version
+### Tools and Dependencies
 
-This project requires Go 1.24.2, managed via mise in this project. The mise configuration provides task automation for building, installing, and testing the provider.
+This project uses [mise](https://mise.jdx.dev/) for managing tools and task automation:
+
+**Required Tools (managed by mise):**
+- Go 1.24.2
+- golangci-lint v2.7.2
+- goreleaser 2.13.1
+- opentofu 1.9.0
+
+**Setup:**
+```bash
+# Install mise if not already installed
+# See: https://mise.jdx.dev/getting-started.html
+
+# Enter project directory (triggers mise hooks)
+cd terraform-provider-homelab
+
+# Or manually install tools
+mise install
+```
+
+The mise configuration (`mise.toml`) automatically:
+- Installs required tools on directory entry
+- Loads environment variables from `.env` and `.creds.env.yaml`
+- Installs pre-commit hooks
 
 ## Code Structure
 
@@ -65,8 +104,21 @@ This project requires Go 1.24.2, managed via mise in this project. The mise conf
 ├── .mise/                               # Mise task automation
 │   └── tasks/provider/                  # Provider-specific tasks
 │       ├── build                        # Format, vet, tidy (go fmt/vet/mod tidy)
-│       ├── install                      # Build with GoReleaser and install to Go bin AND OpenTofu plugins dir
+│       ├── install                      # Build with GoReleaser and install to GOBIN AND OpenTofu plugins dir
 │       └── examples/naming/plan         # Test with naming example (tofu plan only, no init)
+│
+├── .goreleaser.yml                      # GoReleaser configuration for builds and releases
+│                                        # - Snapshot mode for local dev (--snapshot --single-target)
+│                                        # - Generates version strings like: 0.2.0-next+20250128.abc123
+│
+├── mise.toml                            # Mise configuration
+│                                        # - Tool versions (Go, GoReleaser, OpenTofu, golangci-lint)
+│                                        # - Environment variables and file loading
+│                                        # - Setup hooks (pre-commit installation)
+│
+├── .pre-commit-config.yaml              # Pre-commit hooks configuration
+│
+├── .creds.env.yaml                      # Encrypted credentials (gitignored, optional)
 │
 ├── internal/provider/
 │   ├── provider.go                      # Provider implementation
@@ -105,17 +157,22 @@ The naming data source follows the standard terraform-plugin-framework pattern:
 
 ### Current Naming Logic
 
-**IMPORTANT:** The naming logic in `naming_data_source.go:75-86` implements special handling for production environments:
+**IMPORTANT:** The naming logic in `naming_data_source.go:76-84` implements special handling for production environments:
 
 ```go
 // If env is "prod" or "production", return only the app name (no suffix)
 if data.Env.ValueString() == "prod" || data.Env.ValueString() == "production" {
     data.Name = types.StringValue(data.App.ValueString())
+    resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
     return
 }
 
-// For all other environments, concatenate as app-env
+// Generate the name by concatenating app and env with a hyphen
 name := fmt.Sprintf("%s-%s", data.App.ValueString(), data.Env.ValueString())
+data.Name = types.StringValue(name)
 ```
 
 **Examples:**
@@ -155,28 +212,44 @@ The provider supports two installation approaches for local development:
 
 This is the recommended approach during active development:
 
-1. **Install**: `mise run provider:install` puts binary in Go bin directory (`~/.local/share/mise/installs/go/1.24.2/bin/terraform-provider-homelab`)
-2. **Configure**: `.tofurc` in example directories points to that bin path via `dev_overrides`
+1. **Install**: `mise run provider:install` builds with GoReleaser and installs to GOBIN
+   - GOBIN location: `~/.local/share/mise/installs/go/1.24.2/bin` (when using mise)
+   - Binary name: `terraform-provider-homelab`
+   - Version format: `0.2.0-next+20250128.abc123` (snapshot builds include timestamp and git hash)
+
+2. **Configure**: `.tofurc` in example directories points to GOBIN via `dev_overrides`
+   ```hcl
+   provider_installation {
+     dev_overrides {
+       "registry.terraform.io/abes140377/homelab" = "/Users/seba/.local/share/mise/installs/go/1.24.2/bin"
+     }
+     direct {}
+   }
+   ```
+
 3. **Use**: `TF_CLI_CONFIG_FILE=.tofurc` tells OpenTofu to use dev overrides
 4. **No init needed**: Skip `tofu init` when using dev_overrides (not necessary and may error)
 
 **Advantages:**
-- Changes available immediately after `go install`
-- No version management needed
+- Changes available immediately after rebuild
+- Consistent build process with releases (uses GoReleaser)
+- Meaningful version strings for debugging
 - Fastest iteration cycle
 
 **Note:** Dev overrides warnings are expected and normal during local development.
 
 ### Approach 2: filesystem_mirror
 
-The `mise run provider:install` task also copies the provider to the OpenTofu plugins directory structure:
-- Target: `~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.2.0/darwin_arm64/`
+The `mise run provider:install` task also symlinks the provider to the OpenTofu plugins directory structure:
+- Target: `~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.2.0/<os_arch>/`
+  - Example for macOS ARM64: `~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.2.0/darwin_arm64/`
 - Binary name: `terraform-provider-homelab_v0.2.0`
+- Implementation: Creates symlink from GOBIN to plugins directory
 
 This approach mimics a registry installation and requires:
 - Proper version directory structure
 - Running `tofu init` to discover the provider
-- Configuring `filesystem_mirror` in `.tofurc`
+- Configuring `filesystem_mirror` in `.tofurc` (see `examples/.tofurc.example`)
 
 **Use this approach when:**
 - Testing provider versioning behavior

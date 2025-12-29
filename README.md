@@ -15,8 +15,29 @@ The Homelab provider enables consistent naming conventions across all infrastruc
 
 ## Requirements
 
-- [Go](https://golang.org/doc/install) 1.24.2 (managed via mise in this project)
+### For Users
 - [OpenTofu](https://opentofu.org/) >= 1.9.0
+
+### For Development
+This project uses [mise](https://mise.jdx.dev/) for tool management and task automation.
+
+**Required Tools (automatically managed by mise):**
+- [Go](https://golang.org/doc/install) 1.24.2
+- [OpenTofu](https://opentofu.org/) 1.9.0
+- [GoReleaser](https://goreleaser.com/) 2.13.1
+- [golangci-lint](https://golangci-lint.run/) v2.7.2
+
+**Setup:**
+```bash
+# Install mise (if not already installed)
+# See: https://mise.jdx.dev/getting-started.html
+
+# Clone and enter the repository
+cd terraform-provider-homelab
+
+# Mise will automatically install all required tools
+# (triggered by mise.toml on directory entry)
+```
 
 ## Installation
 
@@ -25,14 +46,18 @@ The Homelab provider enables consistent naming conventions across all infrastruc
 1. **Build and install the provider:**
 
 ```bash
-# Using mise tasks (recommended)
+# Using mise tasks (recommended - builds with GoReleaser)
 mise run provider:install
 
-# Or manually with Go
+# Or quick install with Go (faster, but version="dev")
 go install .
 ```
 
-This installs the provider binary to your Go bin directory. When using mise, this is typically `~/.local/share/mise/installs/go/1.24.2/bin`.
+**Installation Details:**
+- Mise task installs to: `~/.local/share/mise/installs/go/1.24.2/bin/terraform-provider-homelab`
+- Also creates symlink in: `~/.local/share/opentofu/plugins/registry.terraform.io/abes140377/homelab/0.2.0/<os_arch>/`
+- Version format (GoReleaser): `0.2.0-next+20250129.abc123`
+- Version format (go install): `dev`
 
 2. **Configure dev overrides:**
 
@@ -73,6 +98,50 @@ TF_CLI_CONFIG_FILE=.tofurc \
 ```
 
 You should see output showing the generated names.
+
+### Installation Approaches
+
+The provider supports two installation approaches:
+
+#### Approach 1: dev_overrides (Recommended)
+Uses the `.tofurc` configuration above to override provider resolution.
+
+**Advantages:**
+- Instant updates after rebuild (no `tofu init` needed)
+- Simpler workflow for active development
+- Expected "dev overrides" warnings are normal
+
+**Workflow:**
+```bash
+mise run provider:install          # Build and install
+cd examples/data-sources/naming
+TF_CLI_CONFIG_FILE=.tofurc tofu plan  # Use immediately
+```
+
+#### Approach 2: filesystem_mirror
+Uses the symlinked installation in `~/.local/share/opentofu/plugins/`.
+
+**Advantages:**
+- Tests version-based resolution
+- Mimics registry installation behavior
+- No dev override warnings
+
+**Setup:**
+```hcl
+# In ~/.tofurc or project .tofurc
+provider_installation {
+  filesystem_mirror {
+    path    = "/Users/yourusername/.local/share/opentofu/plugins"
+    include = ["registry.terraform.io/abes140377/*"]
+  }
+
+  direct {
+    exclude = ["registry.terraform.io/abes140377/*"]
+  }
+}
+```
+
+See `examples/.tofurc.example` for a complete configuration example.
 
 ## Usage
 
@@ -174,15 +243,28 @@ data "homelab_naming" "staging_api" {
 
 ### Available Mise Tasks
 
-This project uses [mise](https://mise.jdx.dev/) for task automation. Available tasks:
+This project uses [mise](https://mise.jdx.dev/) for task automation:
 
 ```bash
-mise tasks                              # List all available tasks
+# List all available tasks
+mise tasks
 
-# Provider tasks
-mise run provider:build                 # Format, vet, and tidy code
-mise run provider:install               # Install provider to Go bin
-mise run provider:examples:naming:plan  # Test with naming example
+# Available tasks:
+# provider:build                 - Format, vet, and tidy code (go fmt/vet/mod tidy)
+# provider:install [version]     - Build with GoReleaser and install (default: 0.2.0)
+# provider:examples:naming:plan  - Test provider with naming example
+```
+
+**Common workflows:**
+```bash
+# Quick validation before commit
+mise run provider:build
+
+# Full build and install for testing
+mise run provider:install
+
+# Test with example configuration
+mise run provider:examples:naming:plan
 ```
 
 ### Building from Source
@@ -191,15 +273,26 @@ mise run provider:examples:naming:plan  # Test with naming example
 # Install dependencies
 go mod tidy
 
-# Build and verify (format, vet, tidy)
+# Quick validation (format, vet, tidy)
 mise run provider:build
 
-# Install the provider
+# Build and install with GoReleaser (recommended)
 mise run provider:install
 
-# Or manually with Go
+# Or manually with GoReleaser (for all platforms)
+goreleaser build --snapshot --clean
+
+# Or quick install with Go (version will be "dev")
 go install .
 ```
+
+**Important Notes:**
+- `mise run provider:install` uses GoReleaser in snapshot mode for consistency with releases
+- Snapshot builds generate version strings like: `0.2.0-next+20250129.abc123`
+- **WARNING**: The install task cleans previous installations:
+  - Removes `$(go env GOBIN)/terraform-provider-homelab`
+  - Removes entire `~/.local/share/opentofu/plugins/` directory
+- For fastest iteration, use `go install .` (builds with version="dev")
 
 ### Running Tests
 
@@ -221,22 +314,27 @@ TF_CLI_CONFIG_FILE=.tofurc tofu plan
 terraform-provider-homelab/
 ├── main.go                          # Provider server entry point
 ├── go.mod                           # Go module definition
+├── go.sum                           # Go dependencies checksums
 ├── CLAUDE.md                        # Claude Code guidance
+├── README.md                        # This file
+├── .goreleaser.yml                  # GoReleaser build configuration
+├── mise.toml                        # Mise tool and task configuration
+├── .pre-commit-config.yaml          # Pre-commit hooks
 ├── .mise/
-│   ├── common.sh                    # Common functions for tasks
 │   └── tasks/
 │       └── provider/                # Mise task definitions
 │           ├── build                # Format, vet, tidy
-│           ├── install              # Install provider
+│           ├── install              # Install provider with GoReleaser
 │           └── examples/naming/plan # Test with examples
 ├── internal/
 │   └── provider/
 │       ├── provider.go              # Provider implementation
 │       └── naming_data_source.go    # Naming datasource implementation
 └── examples/
+    ├── .tofurc.example              # Example OpenTofu configuration
     └── data-sources/naming/
         ├── main.tf                  # Usage example
-        └── .tofurc                  # Dev overrides config
+        └── .tofurc                  # Dev overrides config (active)
 ```
 
 ## Limitations
@@ -282,8 +380,20 @@ Potential improvements for future iterations:
 
 **Solution**:
 1. Verify Go version: `go version` (should be 1.24.2)
-2. Clean and rebuild: `go clean -cache && go mod tidy && mise run provider:install`
-3. Check for missing dependencies: `go mod download`
+2. Ensure mise tools are installed: `mise install`
+3. Clean and rebuild: `go clean -cache && go mod tidy && mise run provider:install`
+4. Check for missing dependencies: `go mod download`
+5. Verify GoReleaser is available: `goreleaser --version`
+
+### Mise Tool Issues
+
+**Issue**: Commands fail with "tool not found" errors.
+
+**Solution**:
+1. Install mise: See https://mise.jdx.dev/getting-started.html
+2. Install project tools: `mise install`
+3. Verify installations: `mise list`
+4. Check mise configuration: `mise doctor`
 
 ## Contributing
 
@@ -295,6 +405,12 @@ This provider is part of the terragrunt-infrastructure-catalog-homelab project a
 
 ## Resources
 
+### Provider Development
 - [Terraform Plugin Framework Documentation](https://developer.hashicorp.com/terraform/plugin/framework)
 - [HashiCorp Provider Scaffolding Framework](https://github.com/hashicorp/terraform-provider-scaffolding-framework)
 - [OpenTofu Documentation](https://opentofu.org/docs/)
+
+### Tools
+- [Mise - Dev Tools Manager](https://mise.jdx.dev/)
+- [GoReleaser - Release Automation](https://goreleaser.com/)
+- [golangci-lint - Go Linter](https://golangci-lint.run/)
