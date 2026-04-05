@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+
+#description "Setup Github Actions CI for the tofu homeLab provider"
+
+#MISE raw=true
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Voraussetzungen
+# ---------------------------------------------------------------------------
+
+for tool in gh gpg git gum; do
+  command -v "$tool" &>/dev/null || { echo "Required tool not found: $tool" >&2; exit 1; }
+done
+
+gh auth status &>/dev/null || { gum log --level error "Nicht bei GitHub authentifiziert. Bitte 'gh auth login' ausführen."; exit 1; }
+
+# ---------------------------------------------------------------------------
+# Repo & Namespace ermitteln
+# ---------------------------------------------------------------------------
+
+REMOTE_URL=$(git remote get-url origin 2>/dev/null || true)
+if [[ "$REMOTE_URL" =~ github\.com[:/]([^/]+/[^/]+)(\.git)?$ ]]; then
+  REPO="${BASH_REMATCH[1]%.git}"
+else
+  gum log --level error "Konnte GitHub-Repo nicht aus Remote-URL ermitteln: $REMOTE_URL"; exit 1
+fi
+
+NAMESPACE="${REPO%%/*}"
+PROVIDER_NAME=$(echo "$REPO" | sed 's|.*/terraform-provider-||')
+
+gum style --border rounded --padding "1 2" --bold \
+  "GitHub CI Setup" \
+  "Repo:     $REPO" \
+  "Provider: $NAMESPACE/$PROVIDER_NAME"
+
+# ---------------------------------------------------------------------------
+# GPG_FINGERPRINT
+# ---------------------------------------------------------------------------
+
+gum log --level info "GPG-Key ermitteln..."
+
+KEY_IDS=()
+while IFS= read -r line; do KEY_IDS+=("$line"); done < <(
+  gpg --list-secret-keys --keyid-format LONG 2>/dev/null | grep "^sec" | awk '{print $2}' | cut -d'/' -f2
+)
+
+[[ ${#KEY_IDS[@]} -eq 0 ]] && { gum log --level error "Keine lokalen GPG-Secret-Keys gefunden."; exit 1; }
+
+if [[ ${#KEY_IDS[@]} -eq 1 ]]; then
+  KEY_ID="${KEY_IDS[0]}"
+else
+  KEY_ID=$(gum choose --header "Welchen GPG-Key verwenden?" "${KEY_IDS[@]}")
+fi
+
+GPG_FINGERPRINT=$(gpg --list-secret-keys --keyid-format LONG "$KEY_ID" 2>/dev/null \
+  | grep -A1 "^sec" | tail -1 | tr -d '[:space:]')
+
+[[ -z "$GPG_FINGERPRINT" ]] && { gum log --level error "Fingerprint konnte nicht ermittelt werden."; exit 1; }
+gum log --level info "Fingerprint: $GPG_FINGERPRINT"
+
+# ---------------------------------------------------------------------------
+# GPG_PRIVATE_KEY
+# ---------------------------------------------------------------------------
+
+GPG_PRIVATE_KEY=$(gum spin --title "Exportiere GPG Private Key..." -- \
+  gpg --armor --export-secret-keys "$GPG_FINGERPRINT" 2>/dev/null) || true
+
+[[ -z "$GPG_PRIVATE_KEY" ]] && { gum log --level error "GPG Private Key konnte nicht exportiert werden."; exit 1; }
+
+# ---------------------------------------------------------------------------
+# GPG_PASSPHRASE ermitteln
+# ---------------------------------------------------------------------------
+
+TEST_FILE=$(mktemp)
+echo "gpg-test" > "$TEST_FILE"
+NEEDS_PASSPHRASE=false
+gpg --batch --yes --pinentry-mode loopback --passphrase "" \
+  --local-user "$GPG_FINGERPRINT" --detach-sign --output "${TEST_FILE}.sig" \
+  "$TEST_FILE" 2>/dev/null || NEEDS_PASSPHRASE=true
+rm -f "$TEST_FILE" "${TEST_FILE}.sig"
+
+if $NEEDS_PASSPHRASE; then
+  GPG_PASSPHRASE=$(gum input --password --placeholder "GPG-Passphrase eingeben")
+  [[ -z "$GPG_PASSPHRASE" ]] && { gum log --level error "Keine Passphrase eingegeben."; exit 1; }
+else
+  gum log --level warn "GPG-Key hat keine Passphrase."
+  GPG_PASSPHRASE=""
+fi
+
+# ---------------------------------------------------------------------------
+# Secrets setzen
+# ---------------------------------------------------------------------------
+
+set_secret() {
+  echo "$2" | gh secret set "$1" --repo "$REPO"
+  gum log --level info "Secret '$1' gesetzt."
+}
+
+gum spin --title "Setze GitHub Secrets..." -- sleep 0 # Heading vor den set_secret Aufrufen
+
+set_secret "GPG_FINGERPRINT" "$GPG_FINGERPRINT"
+set_secret "GPG_PRIVATE_KEY" "$GPG_PRIVATE_KEY"
+set_secret "GPG_PASSPHRASE"  "$GPG_PASSPHRASE"
+
+# ---------------------------------------------------------------------------
+# Abschlussbericht
+# ---------------------------------------------------------------------------
+
+echo ""
+gum style --border rounded --padding "1 2" --bold "Gesetzte Secrets"
+gh secret list --repo "$REPO"
+
+echo ""
+gum style --border rounded --padding "1 2" --bold "GPG Public Key (für OpenTofu Registry)"
+gpg --armor --export "$GPG_FINGERPRINT"
+
+echo ""
+gum style --bold "Nächste Schritte (einmalig, falls noch nicht erledigt):"
+echo ""
+gum log --level warn "1. GPG-Key registrieren (nur über Web-Formular, kein CLI!):"
+echo "   URL:       https://github.com/opentofu/registry/issues/new?template=provider_key.yml"
+echo "   Title:     Provider Key: ${NAMESPACE}/${PROVIDER_NAME}"
+echo "   Namespace: ${NAMESPACE}   Name: ${PROVIDER_NAME}"
+echo "   GPG Key:   (obigen Public Key einfügen)"
+echo ""
+gum log --level warn "2. Provider einreichen (nur über Web-Formular, kein CLI!):"
+echo "   URL:   https://github.com/opentofu/registry/issues/new?template=provider.yml"
+echo "   Title: Provider: ${NAMESPACE}/${PROVIDER_NAME}   Repo: ${REPO}"
+echo ""
+gum log --level warn "3. Nach Genehmigung beider Issues: neuen Tag pushen:"
+echo "   git tag vX.Y.Z && git push origin vX.Y.Z"
+echo ""
+gum log --level info "Registry-URL: https://search.opentofu.org/provider/${NAMESPACE}/${PROVIDER_NAME}/latest"
