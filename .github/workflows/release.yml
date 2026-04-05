@@ -79,8 +79,9 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          # Use latest stable version of GoReleaser
-          version: latest
+          # Pinned to v2.14.3 — v2.15.0+ breaks checksum signature verification
+          # See: https://github.com/opentofu/registry/issues/3974
+          version: "~> v2.14.3"
           # Run the release process
           args: release --clean
         env:
