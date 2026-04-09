@@ -22,6 +22,7 @@ This project uses mise for task automation. List all available tasks:
 ```bash
 mise tasks
 # Output:
+# github:setup-ci                      Setup Github Actions CI for the tofu homeLab provider
 # provider:build                       Build and verify the tofu homeLab provider
 # provider:install                     Install the Terraform HomeLab provider
 # provider:examples:naming:plan        Plan tofu homeLab provider naming data sources examples
@@ -49,9 +50,23 @@ cp dist/terraform-provider-homelab_*/terraform-provider-homelab "$(go env GOBIN)
 - The install task uses GoReleaser in snapshot mode for consistency with release builds
 - Adds ~2-3s compared to `go install`, but ensures identical build flags and provides meaningful version strings (e.g., `0.3.0-next+20250128.abc123`)
 - **WARNING**: `mise run provider:install` removes existing installations:
-  - Removes `$(go env GOBIN)/terraform-provider-homelab`
+  - Removes `$GOROOT/bin/terraform-provider-homelab` (same path as `$(go env GOBIN)` when using mise)
   - Removes entire `~/.local/share/opentofu/plugins/` directory
 - For fastest iteration during debugging, you can use `go install .` directly (builds with version="dev")
+
+### GitHub CI Setup
+
+```bash
+# Interaktives Setup der GitHub Actions CI (GPG-Keys, Secrets)
+mise run github:setup-ci
+```
+
+Dieses Skript:
+- Ermittelt GPG-Key aus dem lokalen Keyring (bei mehreren Keys: interaktive Auswahl via `gum`)
+- Setzt die GitHub Actions Secrets `GPG_FINGERPRINT`, `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`
+- Gibt Anweisungen für die einmalige Registrierung bei der OpenTofu Registry aus
+
+**Voraussetzungen:** `gh`, `gpg`, `git`, `gum` müssen installiert sein und `gh auth login` muss abgeschlossen sein.
 
 ### Testing
 
@@ -102,10 +117,12 @@ The mise configuration (`mise.toml`) automatically:
 │                                        # - Calls providerserver.Serve()
 │
 ├── .mise/                               # Mise task automation
-│   └── tasks/provider/                  # Provider-specific tasks
-│       ├── build                        # Format, vet, tidy (go fmt/vet/mod tidy)
-│       ├── install                      # Build with GoReleaser and install to GOBIN AND OpenTofu plugins dir
-│       └── examples/naming/plan         # Test with naming example (tofu plan only, no init)
+│   └── tasks/
+│       ├── github/setup-ci              # Interactive GitHub CI setup (GPG secrets, registry instructions)
+│       └── provider/                    # Provider-specific tasks
+│           ├── build                    # Format, vet, tidy (go fmt/vet/mod tidy)
+│           ├── install                  # Build with GoReleaser and install to GOBIN AND OpenTofu plugins dir
+│           └── examples/naming/plan     # Test with naming example (tofu plan only, no init)
 │
 ├── .goreleaser.yml                      # GoReleaser configuration for builds and releases
 │                                        # - Snapshot mode for local dev (--snapshot --single-target)
@@ -243,7 +260,7 @@ This is the recommended approach during active development:
 The `mise run provider:install` task also symlinks the provider to the OpenTofu plugins directory structure:
 - Target: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.3.0/<os_arch>/`
   - Example for macOS ARM64: `~/.local/share/opentofu/plugins/registry.terraform.io/sflab-io/homelab/0.3.0/darwin_arm64/`
-- Binary name: `terraform-provider-homelab_v0.2.0`
+- Binary name: `terraform-provider-homelab_v0.3.0`
 - Implementation: Creates symlink from GOBIN to plugins directory
 
 This approach mimics a registry installation and requires:
@@ -262,4 +279,4 @@ This approach mimics a registry installation and requires:
 - No managed resources (data sources only)
 - No provider functions
 - Simple naming logic with special prod/production handling; no advanced validation or transformations
-- Not published to Terraform Registry (local development only)
+- Not yet published to OpenTofu Registry (CI/GPG setup via `github:setup-ci` prepares for registry submission)
